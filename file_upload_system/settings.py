@@ -50,7 +50,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 
 SERVER_IP = env("SERVER_IP")
@@ -61,8 +61,8 @@ ORIGIN_1 = "https://" + SERVER_IP
 ORIGIN_2 = "http://" + SERVER_IP
 CSRF_TRUSTED_ORIGINS = [ORIGIN_1,ORIGIN_2]
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False # True when deployed to a domain
+CSRF_COOKIE_SECURE = False # True when deployed to a domain
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 SECURE_HSTS_SECONDS = 31536000  # 1 year
