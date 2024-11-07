@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" {% printHtmlAttributes 'html' %}>
+    <head>
+        <title>{% block title %}{% endblock title %} - File Upload System</title>
+        <meta charset="utf-8"/>
+        <meta name="description" content=""/>
+        <meta name="keywords" content=""/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="" />
+        <link rel="canonical" href=""/>
+        <link rel="shortcut icon" href="{% includeFavicon %}"/>
+
+        {% block css %}
+        {% includeFonts %}
+
+        {% getVendors 'css' as vendors_css %}
+        {% for file in vendors_css %}
+        <link href="{{ file }}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+
+        {% getCustomCss as css %}
+        {% for file in css %}
+        <link href="{% static file %}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+
+        {% getGlobalAssets 'css' as assets_css %}
+        {% for file in assets_css %}
+        <link href="{% static file %}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+        {% endblock css %}
+
+    </head>
+
+    <body {% printHtmlClasses 'body' %} {% printHtmlAttributes 'body' %} class="app-default" data-kt-app-page-loading-enabled="true" data-kt-app-page-loading="on">
+        
+        <div class="page-loader flex-column bg-dark bg-opacity-25">
+            <span class="spinner-border text-primary" role="status"></span>
+            <span class="text-gray-800 fs-6 fw-semibold mt-5">Loading...</span>
+        </div>
+
+        {% block layout %}
+        {% endblock layout %}
+
+        {% block javascript %}
+        {% getGlobalAssets 'js' as assets_js %}
+        {% for file in assets_js %}
+            <script src="{% static file %}"></script>
+        {% endfor %}
+
+        {% getVendors 'js' as vendors_js %}
+        {% for file in vendors_js %}
+        <script src="{{ file }}"></script>
+        {% endfor %}
+
+        {% getCustomJs as js %}
+        {% for file in js %}
+        <script src="{% static file %}"></script>
+        {% endfor %}
+        {% endblock javascript %}
+
+    </body>
+</html>

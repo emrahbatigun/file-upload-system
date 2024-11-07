@@ -1,0 +1,34 @@
+<div class="modal fade" id="kt_modal_upload" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bold">Upload files</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark fs-3 text-danger"></i>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-column align-items-start justify-content-center">
+                    <form id="file_upload_form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <label for="file_input" class="btn btn-primary mb-2">Choose File</label>
+                        <input type="file" id="file_input" name="file" accept=".txt" required style="display: none;">
+                        <span id="file_name" class="mt-1 text-gray-900 ms-3"></span>
+                    </form>
+                    <span class="form-text text-gray-700">
+                        File must be in txt format.
+                    </span>
+                    <span class="form-text text-gray-700">
+                        File size must be between 0.5 KB and 2KB.
+                    </span>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="upload_button">
+                        {% include 'partials/general/_button-indicator.html' with label='Upload' %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
