@@ -25,7 +25,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST << 'EOF'
             set -e  # Exit immediately if a command exits with a non-zero status
-            cd /home/$SERVER_USER/file-upload-system
+            cd /home/${{ secrets.SERVER_USER }}/file-upload-system
 
             git pull https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com/emrahbatigun/file-upload-system.git main
 
