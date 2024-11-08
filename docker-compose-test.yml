@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  app:
+    container_name: file_upload_system_test
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./file_upload_system/.env
+    volumes:
+      - static-test-data:/app/staticfiles
+    ports:
+      - "8001:8000"
+    command: >
+      sh -c "python3 manage.py migrate &&
+             python3 manage.py collectstatic --noinput &&
+             pytest --disable-warnings --maxfail=1"
+
+volumes:
+  static-test-data:
