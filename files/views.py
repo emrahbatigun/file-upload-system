@@ -1,7 +1,6 @@
 import re
 import boto3
 import os
-import string
 import hashlib
 import logging
 
@@ -14,6 +13,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from rest_framework.throttling import UserRateThrottle
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -24,15 +24,15 @@ from urllib.parse import unquote
 from file_upload_system.layout_config import LayoutConfig
 from file_upload_system.__init__ import Layout
 
-from .serializers import FileUploadSerializer
+from .serializers import FileUploadSerializer, FileSerializer
 from .models import File, FileAccessLog  
 
 
 logger = logging.getLogger(__name__)
 
 
-AWS_REGION_NAME = settings.REGION_NAME
-BUCKET_NAME = settings.BUCKET_NAME
+AWS_REGION_NAME = settings.AWS_REGION_NAME
+AWS_BUCKET_NAME = settings.AWS_BUCKET_NAME
 AWS_ENCRYPTION_TYPE = settings.AWS_ENCRYPTION_TYPE
 AWS_ENCRYPTION_KEY_ID = settings.AWS_ENCRYPTION_KEY_ID
 AWS_ACCESS_KEY = settings.AWS_ACCESS_KEY
@@ -61,6 +61,7 @@ def handle_file_not_found():
     """Return response for file not found with a generic message."""
     return HttpResponse("File not found or permission denied.", status=404)
 
+
 @method_decorator(login_required, name='dispatch')
 class FilesView(TemplateView):
     template_name = 'pages/files/index.html'
@@ -77,21 +78,25 @@ class FilesView(TemplateView):
         })
         return context
 
-@method_decorator(login_required, name='dispatch')
+
 class FileUploadAPI(APIView):
-    throttle_classes = [UserRateThrottle] 
+    throttle_classes = [UserRateThrottle]
+    permission_classes = [IsAuthenticated]
 
     def is_text_file(self, file):
-        """Check if the file contains only text characters using a MIME-type check."""
+        """Check if the file contains only text characters by verifying UTF-8 encoding and excluding null bytes."""
         try:
             sample = file.read(1024)
             file.seek(0)
-            for byte in sample:
-                if byte not in string.printable.encode():
-                    return False
+
+            if b'\x00' in sample:
+                return False
+
+            sample.decode('utf-8')
             return True
-        except Exception:
+        except UnicodeDecodeError:
             return False
+
 
     def generate_unique_filename(self, user, filename):
         """Generate a unique sanitized filename by appending a number if it already exists."""
@@ -111,19 +116,18 @@ class FileUploadAPI(APIView):
         if serializer.is_valid():
             uploaded_file = serializer.validated_data['file']
 
-            
             if not uploaded_file.name.endswith('.txt') or uploaded_file.content_type != 'text/plain':
                 return Response({"error": "Only .txt files are allowed."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if not self.is_text_file(uploaded_file):
-                return Response({"error": "The file content must be plain text."}, status=status.HTTP_400_BAD_REQUEST)
-
             if uploaded_file.size < 512:
                 return Response({"error": "File size is too small. Minimum size is 0.5KB."}, status=status.HTTP_400_BAD_REQUEST)
+
             if uploaded_file.size > 2048:
                 return Response({"error": "File size exceeds 2KB limit."}, status=status.HTTP_400_BAD_REQUEST)
 
-            
+            if not self.is_text_file(uploaded_file):
+                return Response({'error': 'The file content must be plain text.'}, status=status.HTTP_400_BAD_REQUEST)
+
             unique_filename = self.generate_unique_filename(request.user, uploaded_file.name)
             s3_client = get_s3_client()
             hashed_user_id = hash_user_id(request.user.id)
@@ -133,7 +137,7 @@ class FileUploadAPI(APIView):
                 with transaction.atomic():  
                     s3_client.upload_fileobj(
                         uploaded_file,
-                        BUCKET_NAME,
+                        AWS_BUCKET_NAME,
                         file_key,
                         ExtraArgs={
                             "ContentType": "text/plain",
@@ -142,7 +146,7 @@ class FileUploadAPI(APIView):
                         }
                     )
 
-                    file_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{file_key}"
+                    file_url = f"https://{AWS_BUCKET_NAME}.s3.amazonaws.com/{file_key}"
                     upload_timestamp = timezone.now()
 
                     File.objects.create(
@@ -162,9 +166,9 @@ class FileUploadAPI(APIView):
         return Response(serializer.errors, status=400)
 
 
-@method_decorator(login_required, name='dispatch')
 class FileDownloadAPI(APIView):
-    throttle_classes = [UserRateThrottle]  
+    throttle_classes = [UserRateThrottle]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, file_name, *args, **kwargs):
         s3_client = get_s3_client()
@@ -176,7 +180,7 @@ class FileDownloadAPI(APIView):
             with transaction.atomic():  
                 
                 file_record = File.objects.get(filename=decoded_filename, user=request.user)
-                file_object = s3_client.get_object(Bucket=BUCKET_NAME, Key=file_key)
+                file_object = s3_client.get_object(Bucket=AWS_BUCKET_NAME, Key=file_key)
                 file_content = file_object['Body'].read()
 
                 FileAccessLog.objects.create(
@@ -195,18 +199,19 @@ class FileDownloadAPI(APIView):
             return HttpResponse("Failed to retrieve file.", status=500)
 
 
-@method_decorator(login_required, name='dispatch')
 class FileListAPI(APIView):
     throttle_classes = [UserRateThrottle]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         files = File.objects.filter(user=request.user)
-        return Response({"files": files}, status=200)
+        serializer = FileSerializer(files, many=True)
+        return Response({"files": serializer.data}, status=200)
 
 
-@method_decorator(login_required, name='dispatch')
 class FileContentAPI(APIView):
     throttle_classes = [UserRateThrottle]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, file_name, *args, **kwargs):
         s3_client = get_s3_client()
@@ -219,7 +224,7 @@ class FileContentAPI(APIView):
             with transaction.atomic():  
                 
                 file_record = File.objects.get(filename=decoded_filename, user=request.user)
-                file_object = s3_client.get_object(Bucket=BUCKET_NAME, Key=file_key)
+                file_object = s3_client.get_object(Bucket=AWS_BUCKET_NAME, Key=file_key)
                 file_content = file_object['Body'].read().decode('utf-8')
                 
                 FileAccessLog.objects.create(

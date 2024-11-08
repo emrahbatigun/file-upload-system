@@ -21,8 +21,8 @@ environ.Env.read_env()
 
 AWS_ACCESS_KEY = env("AWS_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
-REGION_NAME = env("REGION_NAME")
-BUCKET_NAME = env("BUCKET_NAME")
+AWS_REGION_NAME = env("AWS_REGION_NAME")
+AWS_BUCKET_NAME = env("AWS_BUCKET_NAME")
 AWS_ENCRYPTION_TYPE = env("AWS_ENCRYPTION_TYPE")
 AWS_ENCRYPTION_KEY_ID = env("AWS_ENCRYPTION_KEY_ID")
 
@@ -36,8 +36,8 @@ X_FRAME_OPTIONS = 'DENY'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2048  # Set max upload size to 2KB
 
 LOGIN_URL = '/signin/'
-LOGIN_REDIRECT_URL = ''  # Redirect to 'home' after login
-LOGOUT_REDIRECT_URL = 'signin'  # Redirect to sign-in page after logout
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = 'signin'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -52,17 +52,16 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-
 SERVER_IP = env("SERVER_IP")
 
-ALLOWED_HOSTS = [SERVER_IP]
+ALLOWED_HOSTS = [SERVER_IP, 'localhost', '127.0.0.1']
 
 ORIGIN_1 = "https://" + SERVER_IP
 ORIGIN_2 = "http://" + SERVER_IP
 CSRF_TRUSTED_ORIGINS = [ORIGIN_1,ORIGIN_2]
 
-SESSION_COOKIE_SECURE = False # True when deployed to a domain
-CSRF_COOKIE_SECURE = False # True when deployed to a domain
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 SECURE_HSTS_SECONDS = 31536000  # 1 year
@@ -94,8 +93,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
-
 
 
 ROOT_URLCONF = 'file_upload_system.urls'
@@ -153,37 +152,38 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '10/minute',
     },
+    'UNAUTHENTICATED_USER': None,
 }
 
+if not DEBUG:
+    LOG_DIR = Path(BASE_DIR / 'logs')
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-LOG_DIR = Path(BASE_DIR / 'logs')
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs/django.log'),
-            'formatter': 'verbose',
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'WARNING',
+                'class': 'logging.FileHandler',
+                'filename': os.path.join(BASE_DIR, 'logs/django.log'),
+                'formatter': 'verbose',
+            },
         },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'WARNING',
-            'propagate': True,
+        'loggers': {
+            'django': {
+                'handlers': ['file'],
+                'level': 'WARNING',
+                'propagate': True,
+            },
         },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {message}',
+                'style': '{',
+            },
         },
-    },
-}
+    }
 
 
 
@@ -275,6 +275,9 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

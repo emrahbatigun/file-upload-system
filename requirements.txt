@@ -5,6 +5,7 @@ mysqlclient==2.2.5
 PyMySQL==1.1.1
 cryptography==43.0.3
 django-environ==0.11.2
+whitenoise==6.7.0
 pytest==8.3.3
 pytest-django==4.9.0
-moto==5.0.20
+moto==4.2.14
