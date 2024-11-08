@@ -33,7 +33,7 @@ jobs:
             docker-compose -f docker-compose.yml build
 
             echo "Running tests..."
-            docker-compose -f docker-compose.yml exec app pytest
+            docker-compose -f docker-compose.yml run --rm app pytest
             TEST_EXIT_CODE=$?
 
             if [ $TEST_EXIT_CODE -eq 0 ]; then
