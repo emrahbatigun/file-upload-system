@@ -54,11 +54,14 @@ DEBUG = False
 
 SERVER_IP = env("SERVER_IP")
 
-ALLOWED_HOSTS = [SERVER_IP, 'localhost', '127.0.0.1']
+DOMAIN_1 = env("DOMAIN_1")
+DOMAIN_2 = env("DOMAIN_2")
 
-ORIGIN_1 = "https://" + SERVER_IP
-ORIGIN_2 = "http://" + SERVER_IP
-CSRF_TRUSTED_ORIGINS = [ORIGIN_1,ORIGIN_2]
+SERVER_IP_URLS = [f"{scheme}://{SERVER_IP}" for scheme in ("http", "https")]
+DOMAIN_URLS = [f"https://{domain}" for domain in (DOMAIN_1, DOMAIN_2)]
+
+ALLOWED_HOSTS = [SERVER_IP, "localhost", "127.0.0.1", DOMAIN_1, DOMAIN_2]
+CSRF_TRUSTED_ORIGINS = SERVER_IP_URLS + DOMAIN_URLS
 
 SESSION_COOKIE_SECURE = False # MUST BE TRUE FOR PROD
 CSRF_COOKIE_SECURE = False # MUST BE TRUE FOR PROD
