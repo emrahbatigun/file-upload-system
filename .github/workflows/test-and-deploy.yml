@@ -30,17 +30,15 @@ jobs:
             git pull https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com/emrahbatigun/file-upload-system.git main
 
             echo "Building Docker containers for testing..."
-            docker-compose -f docker-compose.test.yml up --build -d
+            docker-compose -f docker-compose.yml build
 
             echo "Running tests..."
-            docker-compose -f docker-compose.test.yml exec app pytest
+            docker-compose -f docker-compose.yml exec app pytest
             TEST_EXIT_CODE=$?
-
-            docker-compose -f docker-compose.test.yml down
 
             if [ $TEST_EXIT_CODE -eq 0 ]; then
               echo "Tests passed. Deploying to production..."
-              docker-compose up -d --build
+              docker-compose up -d
             else
               echo "Tests failed. Deployment aborted."
               exit 1
